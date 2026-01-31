@@ -46,6 +46,13 @@ const RegistrationPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!capturedImage) return alert('Please capture a photo');
+    
+    // Validate form fields
+    if (!formData.name || !formData.aadhaarNumber || !formData.phoneNumber) {
+      alert('Please fill all fields');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -66,15 +73,25 @@ const RegistrationPage = () => {
       payload.append('faceImage', faceFile);
       payload.append('faceDescriptor', mockDescriptor);
 
-      await axios.post('http://localhost:5000/api/auth/register', payload, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+      console.log('Sending registration data:', {
+        name: formData.name,
+        aadhaarNumber: formData.aadhaarNumber,
+        phoneNumber: formData.phoneNumber,
+        hasImage: !!faceFile,
+        descriptorLength: mockDescriptor.length
       });
+
+      // Don't set Content-Type header - let axios set it with boundary
+      const response = await axios.post('http://localhost:5000/api/auth/register', payload);
       
+      console.log('Registration response:', response.data);
       alert('Registration Successful!');
       navigate('/login');
-    } catch (err) {
-      console.error(err);
-      alert('Registration failed');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Registration failed';
+      console.error('Error details:', err.response?.data);
+      alert(`Registration failed: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

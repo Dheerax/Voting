@@ -6,9 +6,21 @@ const otpStore = {};
 
 exports.registerUser = async (req, res) => {
   try {
-    const { name, aadhaarNumber, phoneNumber, faceDescriptor } = req.body;
-    let photoUrl = "";
+    console.log("Registration request received");
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
 
+    const { name, aadhaarNumber, phoneNumber, faceDescriptor } = req.body;
+    
+    // Validate required fields
+    if (!name || !aadhaarNumber || !phoneNumber || !faceDescriptor) {
+      return res.status(400).json({ 
+        message: "Missing required fields",
+        received: { name, aadhaarNumber, phoneNumber, hasFaceDescriptor: !!faceDescriptor }
+      });
+    }
+
+    let photoUrl = "";
     if (req.file) {
       photoUrl = req.file.path;
     }
@@ -21,7 +33,12 @@ exports.registerUser = async (req, res) => {
     // Parse faceDescriptor if sent as string
     let parsedDescriptor = faceDescriptor;
     if (typeof faceDescriptor === "string") {
-      parsedDescriptor = JSON.parse(faceDescriptor);
+      try {
+        parsedDescriptor = JSON.parse(faceDescriptor);
+      } catch (parseError) {
+        console.error("Error parsing faceDescriptor:", parseError);
+        return res.status(400).json({ message: "Invalid faceDescriptor format" });
+      }
     }
 
     const user = new User({
@@ -33,10 +50,15 @@ exports.registerUser = async (req, res) => {
     });
 
     await user.save();
+    console.log("User registered successfully:", user._id);
     res.status(201).json({ message: "Registration successful" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Registration error:", error);
+    res.status(500).json({ 
+      message: "Server error",
+      error: error.message,
+      details: error.errors ? Object.keys(error.errors) : undefined
+    });
   }
 };
 
